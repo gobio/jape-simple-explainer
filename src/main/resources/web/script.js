@@ -15,10 +15,12 @@ function updateTraces() {
         let i = 0;
         let j = 0;
         while (i < currentTraces.length && j < traces.length) {
-            if (currentTraces[i].id !== traces[j].id) {
-                traceList.insertBefore(createTraceElement(traces[j]), currentTraces[i]);
+            let currentTrace = currentTraces[i];
+            let newTrace =  traces[j];
+            if (currentTrace.id !== newTrace.id) {
+                traceList.insertBefore(createTraceElement(newTrace), currentTrace);
             } else {
-                currentTraces[i].firstElementChild.innerHTML = traceDescription(traces[j]);
+                updateTraceElement(newTrace,currentTrace);
             }
             i++;
             j++;
@@ -38,26 +40,36 @@ function computeChartHeight(chartData) {
     return Math.min((uniqueRows.size * 41) + 50, 500);
 }
 
-function traceDescription(trace) {
+function timeDescription(trace) {
     if (trace.end) {
-        return `<b class="name">${trace.name}</b> <i>${localTime(trace.start)} [${seconds(trace.asyncEnd - trace.start)}]</i>`;
+        return `${localTime(trace.start)} [${seconds(trace.end - trace.start)}]`;
     } else {
-        return `<b>${trace.name}</b>  <i>${localTime(trace.start)}</i>`;
+        return `${localTime(trace.start)} ...`;
     }
+}
+function updateTraceElement(newTrace,currentTrace){
+    currentTrace.querySelector(".time").textContent = timeDescription(newTrace);
+    if (newTrace.end && !currentTrace.onclick) {
+        currentTrace.onclick = () => drawChart(newTrace.id);
+    }
+
 }
 
 function createTraceElement(trace) {
     const traceTemplate = document.getElementById("trace-template");
     const row = traceTemplate.content.firstElementChild.cloneNode(true);
-    row.firstElementChild.innerHTML = traceDescription(trace);
+    row.querySelector(".time").textContent = timeDescription(trace);
+    row.querySelector(".name").textContent = trace.name;
     row.id = trace.id;
-    row.onclick = () => drawChart(trace.id);
+    if (trace.end) {
+        row.onclick = () => drawChart(trace.id);
+    }
     return row;
 }
 
 function deleteChart(transactionId) {
     let row = document.getElementById(transactionId);
-    row.children[1].firstElementChild.remove();
+    row.querySelector(".chart").firstElementChild.remove();
     row.onclick = () => drawChart(transactionId);
 }
 
@@ -65,7 +77,7 @@ function drawChart(transactionId) {
     let row = document.getElementById(transactionId);
     row.onclick = () => deleteChart(transactionId);
     fetchJson("/traces/" + transactionId + "/stages").then(stages => {
-        var chart = new google.visualization.Timeline(row.children[1]);
+        var chart = new google.visualization.Timeline(row.querySelector(".chart"));
         var dataTable = new google.visualization.DataTable();
         dataTable.addColumn({type: 'string', id: 'Thread (level)'});
         dataTable.addColumn({type: 'string', id: 'Name'});

@@ -2,6 +2,10 @@
   padding: 1px;
 }
 
+.time {
+  width: 150px;
+}
+
 #board {
   margin: 10px;
   display: grid;
