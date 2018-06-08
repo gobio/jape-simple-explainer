@@ -41,21 +41,17 @@ public class SimpleExplainer implements ExplainerActivator {
     }
 
     private void startServer() {
-//        ResourceManager rm = PathResourceManager.builder()
-//                                                .setBase(Paths.get("c:/develop/jape-collector-in-memory/web-test/"))
-//                                                .setCaseSensitive(false)
-//                                                .build();
         ResourceManager resourceManager = new ClassPathResourceManager(this.getClass().getClassLoader(), "web");
         ResourceHandler resourceHandler = new ResourceHandler(resourceManager);
 
-        HttpHandler h = new RoutingHandler()
+        HttpHandler handler = new RoutingHandler()
                 .get("/traces", this::traces)
                 .get("/traces/{id}", this::traceById)
                 .get("/traces/{id}/stages", this::traceStagesById)
                 .get("/*", resourceHandler);
 
 
-        Undertow server = Undertow.builder().addHttpListener(5005, "localhost", h).build();
+        Undertow server = Undertow.builder().addHttpListener(5005, "localhost", handler).build();
         server.start();
     }
 
