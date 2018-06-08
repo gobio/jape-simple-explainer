@@ -1,7 +1,13 @@
-group 'eu.gobio.jape'
-version '1.0-SNAPSHOT'
+plugins {
+    id "java"
+    id "java-library"
+    id "maven-publish"
+    id "com.jfrog.bintray" version "1.8.0"
+}
 
-apply plugin: 'java'
+group 'eu.gobio.jape'
+version '1.0'
+def japeVersion='1.0'
 
 sourceCompatibility = 1.8
 
@@ -10,15 +16,41 @@ repositories {
     mavenLocal()
 }
 
+bintray {
+    user = findProperty('user')
+    key = findProperty('key')
+    publications = ['maven']
+    publish = true
+    pkg {
+        repo = 'main'
+        name = project.name
+        version {
+            name = project.version
+        }
+    }
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier 'sources'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifact sourcesJar
+        }
+    }
+}
 
 dependencies {
-    compile 'eu.gobio.jape:jape:1.0-SNAPSHOT'
+    compile group: 'eu.gobio.jape', name: 'jape', version: japeVersion
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.0'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.0'
     compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.11.0'
     compile group: 'org.glassfish', name: 'javax.json', version: '1.1.2'
     compile 'io.undertow:undertow-core:2.0.9.Final'
-    compile 'com.github.jknack:handlebars:4.0.7'
     compile 'org.eclipse:yasson:1.0.1'
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
