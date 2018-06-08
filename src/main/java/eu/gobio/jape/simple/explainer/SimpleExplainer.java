@@ -9,9 +9,11 @@ import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.util.Headers;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.status.StatusLogger;
 
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
@@ -33,6 +35,7 @@ public class SimpleExplainer implements ExplainerActivator {
 
     private void installLogFilter() {
         collector = new Collector();
+        StatusLogger.getLogger().setLevel(Level.OFF);
 
         LoggerContext context = (LoggerContext) LogManager.getContext(false);
         Configuration config = context.getConfiguration();
