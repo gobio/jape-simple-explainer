@@ -12,6 +12,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Collector extends AbstractFilter {
     private Map<String, Trace> traces = new ConcurrentHashMap<>();
+    public static Collector instance;
+
+    public Collector() {
+        Collector.instance = this;
+    }
+
+    public void clear(){
+        traces.clear();
+    }
 
     @Override
     public Result filter(org.apache.logging.log4j.core.Logger logger, Level level, Marker marker, String msg,

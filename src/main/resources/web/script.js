@@ -1,6 +1,7 @@
 localTime = miliseconds => new Date(miliseconds).toLocaleTimeString();
 
 timeUnits = ['ns', '\u00B5s', 'ms', 's']
+maxTimeSpan = 0;
 
 function formatTime(nanoseconds) {
     let i = 0;
@@ -43,6 +44,8 @@ function _updateTraces(traces) {
     while (j < traces.length) {
         traceList.appendChild(createTraceElement(traces[j++]));
     }
+    maxTimeSpan=0;
+    traces.forEach(trace=>maxTimeSpan = Math.max(maxTimeSpan,trace.asyncEnd-trace.start));
 }
 
 function timeDescription(trace) {
@@ -55,6 +58,7 @@ function timeDescription(trace) {
 
 function updateTraceElement(newTrace, currentTrace) {
     currentTrace.querySelector(".time").textContent = timeDescription(newTrace);
+    $(currentTrace).data("trace",newTrace);
 }
 
 

@@ -246,7 +246,7 @@ class Graph extends Array {
         });
         super.sort((a, b) => a.start - b.start);
         this.start = this[0].start;
-        this.timescale = this.chartWidth / (this.end - this.start);
+        this.timescale = this.chartWidth / maxTimeSpan;//(this.end - this.start);
     }
 
     relativize(item) {

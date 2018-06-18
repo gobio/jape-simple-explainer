@@ -9,7 +9,7 @@
 .chart-board, .trace-item {
   display: grid;
   grid-gap: 10px;
-  grid-template-columns: auto 200px;
+  grid-template-columns: auto 100px;
   grid-template-rows: auto;
 }
 .chart-board .chart, .chart-board .title, .trace-item .chart, .trace-item .title {
