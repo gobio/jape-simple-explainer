@@ -3,10 +3,34 @@
     padding: 1px;
   }
 }
+//.chart{
+//  display: block;
+//  overflow-x: auto;
+//}
 
 .time {
   width: 150px;
 }
+
+.chart-board, .trace-item{
+  //margin: 10px;
+  display: grid;
+  //height: 100%;
+  grid-gap: 10px;
+  grid-template-columns: auto 200px;
+  grid-template-rows: auto;
+
+  .chart, .title {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .stage-details {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
 
 #board {
   margin: 10px;
@@ -20,4 +44,5 @@
     grid-column: 1;
     grid-row: 1;
   }
+
 }

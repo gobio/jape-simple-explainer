@@ -7,21 +7,26 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class Trace {
-    private String id;
-    private long start;
+    private final String id;
+    private final long start;
+    private final long wallTime;
     private Stage root;
     private long asyncEnd = 0;
     private String name;
-
     private Map<Integer, Stage> stages = new ConcurrentHashMap<>();
 
-    public Trace(String id, long start) {
+    public Trace(String id, long start, long wallTime) {
         this.id = id;
         this.start = start;
+        this.wallTime = wallTime;
+    }
+
+    public long getWallTime() {
+        return wallTime;
     }
 
     public long getEnd() {
-        return root!=null?root.getEnd():0;
+        return root != null ? root.getEnd() : 0;
     }
 
     public long getAsyncEnd() {
@@ -46,8 +51,8 @@ public class Trace {
     }
 
     @JsonbTransient
-    public Stage getStage(int id) {
-        return stages.get(id);
+    public Stage getStage(Integer id) {
+        return id != null ? stages.get(id) : null;
     }
 
     @JsonbTransient
@@ -60,6 +65,6 @@ public class Trace {
     }
 
     public void updateEnd(long end) {
-        this.asyncEnd = Math.max(asyncEnd,end);
+        this.asyncEnd = Math.max(asyncEnd, end);
     }
 }

@@ -17,9 +17,11 @@ import org.apache.logging.log4j.status.StatusLogger;
 
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class SimpleExplainer implements ExplainerActivator {
 
@@ -31,6 +33,7 @@ public class SimpleExplainer implements ExplainerActivator {
         jsonb = JsonbBuilder.create();
         installLogFilter();
         startServer();
+        System.out.println("Server started...");
     }
 
     private void installLogFilter() {
@@ -51,11 +54,65 @@ public class SimpleExplainer implements ExplainerActivator {
                 .get("/traces", this::traces)
                 .get("/traces/{id}", this::traceById)
                 .get("/traces/{id}/stages", this::traceStagesById)
+                .get("/dump/{dir}", this::dump)
                 .get("/*", resourceHandler);
 
 
         Undertow server = Undertow.builder().addHttpListener(5005, "localhost", handler).build();
         server.start();
+    }
+
+    private void dump(HttpServerExchange exchange) throws IOException {
+        Path dumpDir = dumpDir(exchange);
+
+        Files.write(dumpDir.resolve("index.html"), jsonb.toJson(traces()).getBytes());
+
+        traces().forEach(trace -> {
+            try {
+                Path traceDir = dumpDir.resolve(trace.getId());
+                Files.createDirectories(traceDir);
+                Files.write(traceDir.resolve("index.html"), jsonb.toJson(trace).getBytes());
+                Files.write(traceDir.resolve("stages"),jsonb.toJson(trace.getStages()).getBytes());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        exchange.getResponseSender().send("Dumped!");
+    }
+
+    private List<Trace> traces() {
+        List<Trace> traces = collector.getTraces();
+        traces.sort(Comparator.comparing(Trace::getStart).reversed());
+        return traces;
+    }
+
+    private Path dumpDir(HttpServerExchange exchange) throws IOException {
+        String dirName = exchange.getQueryParameters().get("dir").pop();
+        Path dumpDir = Paths.get(dirName);
+        if (Files.exists(dumpDir)) {
+            Files.walkFileTree(dumpDir, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                        throws IOException
+                {
+                    Files.delete(file);
+                    return FileVisitResult.CONTINUE;
+                }
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException e)
+                        throws IOException
+                {
+                    if (e == null) {
+                        Files.delete(dir);
+                        return FileVisitResult.CONTINUE;
+                    } else {
+                        // directory iteration failed
+                        throw e;
+                    }
+                }
+            });
+        }
+        return Files.createDirectory(dumpDir);
     }
 
     private void traceById(HttpServerExchange exchange) {
@@ -78,26 +135,13 @@ public class SimpleExplainer implements ExplainerActivator {
 
     private void traceStagesById(HttpServerExchange exchange) {
         setResponseType(exchange);
-        String transactionId = exchange.getQueryParameters().get("id").pop();
-        Trace trace = collector.getTraceById(transactionId);
+        Trace trace = getRequestedTrace(exchange);
 
-        exchange.getResponseSender().send(stagesTable(trace));
-    }
-
-    private String stagesTable(Trace trace) {
-        List<Object[]> stages = trace.getStages().stream().map(stage -> new Object[]{
-                String.format("%s (%d)", stage.getThread(), stage.getLevel()),
-                stage.getName(),
-                stage.getStart() - trace.getStart(),
-                stage.getEnd() - trace.getStart()
-        }).collect(Collectors.toList());
-        return jsonb.toJson(stages);
+        exchange.getResponseSender().send(jsonb.toJson(trace.getStages()));
     }
 
     private void traces(HttpServerExchange exchange) {
         setResponseType(exchange);
-        List<Trace> traces = collector.getTraces();
-        traces.sort(Comparator.comparing(Trace::getStart).reversed());
-        exchange.getResponseSender().send(jsonb.toJson(traces));
+        exchange.getResponseSender().send(jsonb.toJson(traces()));
     }
 }

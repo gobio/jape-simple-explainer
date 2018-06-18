@@ -1,6 +1,15 @@
 localTime = miliseconds => new Date(miliseconds).toLocaleTimeString();
-fetchJson = url => fetch(url).then(response => response.json());
-seconds = miliseconds => (miliseconds / 1000.0).toFixed(3) + "s";
+
+timeUnits = ['ns', '\u00B5s', 'ms', 's']
+
+function formatTime(nanoseconds) {
+    let i = 0;
+    while (nanoseconds > 1000 && i < 3) {
+        i++;
+        nanoseconds /= 1000;
+    }
+    return nanoseconds.toPrecision(3) + timeUnits[i];
+}
 
 function start() {
     updateTraces();
@@ -8,52 +17,46 @@ function start() {
 }
 
 function updateTraces() {
-    fetchJson("/traces").then(traces => {
-        const traceList = document.getElementById("trace-list");
-
-        let currentTraces = traceList.children;
-        let i = 0;
-        let j = 0;
-        while (i < currentTraces.length && j < traces.length) {
-            let currentTrace = currentTraces[i];
-            let newTrace =  traces[j];
-            if (currentTrace.id !== newTrace.id) {
-                traceList.insertBefore(createTraceElement(newTrace), currentTrace);
-            } else {
-                updateTraceElement(newTrace,currentTrace);
-            }
-            i++;
-            j++;
-        }
-        while (i < currentTraces.length) {
-            traceList.removeChild(currentTraces[i++]);
-        }
-        while (j < traces.length) {
-            traceList.appendChild(createTraceElement(traces[j++]));
-        }
-    });
+    fetchJson("traces").then(_updateTraces);
 }
 
-function computeChartHeight(chartData) {
-    let uniqueRows = new Set();
-    chartData.forEach(row => uniqueRows.add(row[0]));
-    return Math.min((uniqueRows.size * 41) + 50, 500);
+function _updateTraces(traces) {
+    const traceList = document.getElementById("trace-list");
+
+    let currentTraces = traceList.children;
+    let i = 0;
+    let j = 0;
+    while (i < currentTraces.length && j < traces.length) {
+        let currentTrace = currentTraces[i];
+        let newTrace = traces[j];
+        if (currentTrace.id !== newTrace.id) {
+            traceList.insertBefore(createTraceElement(newTrace), currentTrace);
+        } else {
+            updateTraceElement(newTrace, currentTrace);
+        }
+        i++;
+        j++;
+    }
+    while (i < currentTraces.length) {
+        traceList.removeChild(currentTraces[i++]);
+    }
+    while (j < traces.length) {
+        traceList.appendChild(createTraceElement(traces[j++]));
+    }
 }
 
 function timeDescription(trace) {
     if (trace.end) {
-        return `${localTime(trace.start)} [${seconds(trace.end - trace.start)}]`;
+        return `${localTime(trace.wallTime)} [${formatTime(trace.end - trace.start)}]`;
     } else {
-        return `${localTime(trace.start)} ...`;
+        return `${localTime(trace.wallTime)} ...`;
     }
 }
-function updateTraceElement(newTrace,currentTrace){
-    currentTrace.querySelector(".time").textContent = timeDescription(newTrace);
-    if (newTrace.end && !currentTrace.onclick) {
-        currentTrace.onclick = () => drawChart(newTrace.id);
-    }
 
+function updateTraceElement(newTrace, currentTrace) {
+    currentTrace.querySelector(".time").textContent = timeDescription(newTrace);
 }
+
 
 function createTraceElement(trace) {
     const traceTemplate = document.getElementById("trace-template");
@@ -61,35 +64,51 @@ function createTraceElement(trace) {
     row.querySelector(".time").textContent = timeDescription(trace);
     row.querySelector(".name").textContent = trace.name;
     row.id = trace.id;
-    if (trace.end) {
-        row.onclick = () => drawChart(trace.id);
-    }
+    const $row = $(row);
+    $row.data("trace", trace);
+    row.querySelector(".name").onclick = () => toggleChart($row);
     return row;
 }
 
-function deleteChart(transactionId) {
-    let row = document.getElementById(transactionId);
-    row.querySelector(".chart").firstElementChild.remove();
-    row.onclick = () => drawChart(transactionId);
+function toggleChart($row) {
+    const trace = $row.data("trace");
+    if (trace.end) {
+        if ($row.data("hidden")) {
+            drawChart($row);
+            $row.data("hidden", false);
+        } else {
+            deleteChart($row);
+            $row.data("hidden", true);
+        }
+    }
 }
 
-function drawChart(transactionId) {
-    let row = document.getElementById(transactionId);
-    row.onclick = () => deleteChart(transactionId);
-    fetchJson("/traces/" + transactionId + "/stages").then(stages => {
-        var chart = new google.visualization.Timeline(row.querySelector(".chart"));
-        var dataTable = new google.visualization.DataTable();
-        dataTable.addColumn({type: 'string', id: 'Thread (level)'});
-        dataTable.addColumn({type: 'string', id: 'Name'});
-        dataTable.addColumn({type: 'number', id: 'Start'});
-        dataTable.addColumn({type: 'number', id: 'End'});
-        dataTable.addRows(stages);
+function deleteChart($row) {
+    $row.find(".toolbar").hide();
+    $row.find(".chart-board").remove();
+}
 
-        var options = {
-            tooltip: {isHtml: true},
-            height: computeChartHeight(stages)
-        };
+function drawChart($row) {
+    const chartBoardTemplate = document.getElementById("chart-board-template")
+        .content.firstElementChild.cloneNode(true);
+    $row.find(".toolbar").show();
+    $row.append(chartBoardTemplate);
 
-        chart.draw(dataTable, options);
+    fetchJson("/traces/" + $row[0].id + "/stages").then(stages => {
+        _drawChart($row, stages);
     });
 }
+
+
+function _drawChart($row, stages) {
+    const chartElement = $row.find(".chart")[0];
+    let graphData = new Graph(chartElement.offsetWidth, chartElement, $row.find(".stage-details")[0]);
+    graphData.draw(stages);
+}
+
+function fetchJson(resource) {
+    let relativeUrl = location.pathname.split('/').slice(0, -1).join('/');
+    relativeUrl = (relativeUrl ? relativeUrl + "/" + resource : resource) + location.search;
+    return fetch(relativeUrl).then(response => response.json());
+}
+

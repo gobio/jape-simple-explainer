@@ -24,6 +24,9 @@ public class Collector extends AbstractFilter {
                 case "jape.stage.start":
                     startStage(params);
                     break;
+                case "jape.stage.flow":
+                    flow(params);
+                    break;
                 case "jape.stage.end":
                     endStage(params);
                     break;
@@ -33,7 +36,7 @@ public class Collector extends AbstractFilter {
     }
 
     private void startTrace(Object[] params) {
-        Trace trace = new Trace((String) params[0], (long) params[1]);
+        Trace trace = new Trace((String) params[0], (long) params[1], (long)params[2]);
         traces.put(trace.getId(), trace);
     }
 
@@ -44,11 +47,18 @@ public class Collector extends AbstractFilter {
                 (long) params[3],
                 (String) params[4],
                 (String) params[5]);
-        if (params[2] != null) {
-            stage.setParent(trace.getStage((int) params[2]));
-        }
+
+        stage.setParent(trace.getStage((Integer) params[2]));
+
         trace.addStage(stage);
     }
+
+    private void flow(Object[] params) {
+        Trace trace = traces.get(params[0]);
+        Stage stage = trace.getStage((Integer) params[1]);
+        stage.setFlow(new Flow((Integer) params[3], (String) params[2]));
+    }
+
 
     private void endStage(Object[] params) {
         Trace trace = traces.get(params[0]);

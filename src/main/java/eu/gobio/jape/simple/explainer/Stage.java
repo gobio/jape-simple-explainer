@@ -1,5 +1,7 @@
 package eu.gobio.jape.simple.explainer;
 
+import javax.json.bind.annotation.JsonbTransient;
+
 public class Stage {
     private int id;
     private Stage parent;
@@ -8,6 +10,7 @@ public class Stage {
     private String name;
     private String thread;
     private int level;
+    private Flow flow;
 
     public Stage(int id, long start, String name, String thread) {
         this.id = id;
@@ -16,17 +19,34 @@ public class Stage {
         this.thread = thread;
     }
 
+    public Flow getFlow() {
+        return flow;
+    }
+
+    public void setFlow(Flow flow) {
+        this.flow = flow;
+    }
+
+    public Integer getParentId() {
+        return parent != null ? parent.getId() : null;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    @JsonbTransient
     public Stage getParent() {
         return parent;
     }
 
     public void setParent(Stage parent) {
-        this.parent = parent;
-        this.level = parent.level + 1;
-    }
-
-    public int getId() {
-        return id;
+        if (parent != null) {
+            this.parent = parent;
+            this.level = parent.level + 1;
+        } else {
+            this.level = 0;
+        }
     }
 
     public long getStart() {
