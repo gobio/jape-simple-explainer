@@ -6,8 +6,8 @@ plugins {
 }
 
 group 'eu.gobio.jape'
-version '1.0'
-def japeVersion='1.0'
+version '1.1'
+def japeVersion='1.1'
 
 sourceCompatibility = 1.8
 
